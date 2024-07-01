@@ -7,7 +7,7 @@ public class Calculator {
         Scanner scanner = new Scanner(System.in);
 
         System.out.println("Calculator");
-        System.out.println("Enter two numbers:");
+        System.out.println("Enter two numbers");
 
         // Input first number
         System.out.print("Number 1: ");
