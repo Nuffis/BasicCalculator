@@ -11,9 +11,12 @@ import javafx.stage.Stage;
 public class Calculator extends Application {
 
     private StringBuilder currentInput = new StringBuilder();
-    private StringBuilder currentNumber = new StringBuilder();
+    private double currentNumber = 0;
+    private double previousNumber = 0;
     private char currentOperator = ' ';
+    private boolean operatorClicked = false;
     private Label resultDisplay;
+    private boolean decimalClicked = false;
 
     public static void main(String[] args) {
         launch(args);
@@ -52,6 +55,12 @@ public class Calculator extends Application {
         grid.add(numberButtons[2], 1, 3);
         grid.add(numberButtons[3], 2, 3);
         grid.add(numberButtons[0], 0, 4, 2, 1);
+
+        // Decimal button
+        Button decimalButton = new Button(".");
+        decimalButton.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        decimalButton.setOnAction(e -> handleDecimalClick());
+        grid.add(decimalButton, 2, 4);
 
         // Operation buttons
         Button addButton = new Button("+");
@@ -92,62 +101,86 @@ public class Calculator extends Application {
     }
 
     private void handleNumberClick(String num) {
+        if (operatorClicked) {
+            currentInput.setLength(0);
+            operatorClicked = false;
+        }
         if (currentInput.length() < 12) { // Limit input length to avoid overflow
             currentInput.append(num);
-            currentNumber.append(num);
+            updateDisplay();
+        }
+    }
+
+    private void handleDecimalClick() {
+        if (!decimalClicked) {
+            if (operatorClicked) {
+                currentInput.setLength(0);
+                operatorClicked = false;
+            }
+            currentInput.append(".");
+            decimalClicked = true;
             updateDisplay();
         }
     }
 
     private void handleOperation(char op) {
-        if (currentOperator != ' ') {
-            calculate();
+        if (currentInput.length() > 0 && !operatorClicked) {
+            calculateIntermediateResult();
+            currentOperator = op;
+            operatorClicked = true;
+            decimalClicked = false;
+            updateDisplay();
         }
-        currentOperator = op;
-        currentInput.append(' ').append(op).append(' ');
-        updateDisplay();
+    }
+
+    private void calculateIntermediateResult() {
+        if (currentInput.length() > 0) {
+            currentNumber = Double.parseDouble(currentInput.toString());
+            if (currentOperator != ' ') {
+                switch (currentOperator) {
+                    case '+':
+                        previousNumber += currentNumber;
+                        break;
+                    case '-':
+                        previousNumber -= currentNumber;
+                        break;
+                    case '*':
+                        previousNumber *= currentNumber;
+                        break;
+                    case '/':
+                        if (currentNumber != 0) {
+                            previousNumber /= currentNumber;
+                        } else {
+                            resultDisplay.setText("Error");
+                            clear();
+                            return;
+                        }
+                        break;
+                }
+            } else {
+                previousNumber = currentNumber;
+            }
+            currentInput.setLength(0);
+            currentInput.append(previousNumber);
+            currentNumber = 0;
+        }
     }
 
     private void calculate() {
-        String[] parts = currentInput.toString().split(" ");
-        double num1 = Double.parseDouble(parts[0]);
-        char op = parts[1].charAt(0);
-        double num2 = Double.parseDouble(parts[2]);
-        double result = 0;
-
-        switch (op) {
-            case '+':
-                result = num1 + num2;
-                break;
-            case '-':
-                result = num1 - num2;
-                break;
-            case '*':
-                result = num1 * num2;
-                break;
-            case '/':
-                if (num2 != 0) {
-                    result = num1 / num2;
-                } else {
-                    resultDisplay.setText("Error");
-                    clear();
-                    return;
-                }
-                break;
-        }
-
-        currentInput.setLength(0);
-        currentNumber.setLength(0);
-        currentInput.append(result);
-        currentNumber.append(result);
+        calculateIntermediateResult();
         currentOperator = ' ';
+        operatorClicked = false;
+        decimalClicked = false;
         updateDisplay();
     }
 
     private void clear() {
         currentInput.setLength(0);
-        currentNumber.setLength(0);
+        previousNumber = 0;
+        currentNumber = 0;
         currentOperator = ' ';
+        operatorClicked = false;
+        decimalClicked = false;
         resultDisplay.setText("0");
     }
 
@@ -155,7 +188,16 @@ public class Calculator extends Application {
         if (currentInput.length() == 0) {
             resultDisplay.setText("0");
         } else {
-            resultDisplay.setText(currentInput.toString());
+            resultDisplay.setText(formatNumber(currentInput.toString()));
+        }
+    }
+
+    private String formatNumber(String number) {
+        double num = Double.parseDouble(number);
+        if (num == (long) num) {
+            return String.format("%d", (long) num);
+        } else {
+            return String.format("%s", num);
         }
     }
 }
